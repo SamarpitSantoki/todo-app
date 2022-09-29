@@ -19,19 +19,8 @@ export default function MainScreen() {
       flex={1}
     >
       <VStack space="5" alignItems="center">
-        <Box p={10} bg={useColorModeValue("red.500", "yellow.500")}>
-          <Text>Hello</Text>
-        </Box>
-        <Box w="100px" h="100px">
+        <Box w="auto" h="100px">
           <TaskItem isDone={checked} onToggleCheckbox={handlePressCheckbox} />
-          {/* <Pressable onPress={handlePressCheckbox}>
-            <AnimatedCheckbox
-              boxOutlineColor="black"
-              checkmarkColor="black"
-              highlightColor="grey"
-              checked={checked}
-            />
-          </Pressable> */}
         </Box>
         <ThemeToggle />
       </VStack>

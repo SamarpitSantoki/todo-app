@@ -9,7 +9,7 @@ import {
   useColorModeValue,
 } from "native-base";
 import AnimatedCheckbox from "./animated-checkbox";
-
+import AnimatedTaskLabel from "./animated-task-label";
 interface Props {
   isDone: boolean;
   onToggleCheckbox?: () => void;
@@ -39,14 +39,12 @@ const TaskItem = (props: Props) => {
     useColorModeValue("muted.400", "muted.600")
   );
 
+  const hStackColor = themeTools.getColor(
+    theme,
+    useColorModeValue("warmgray.50", "primary.900")
+  );
   return (
-    <HStack
-      alignItems="center"
-      w="full"
-      px={4}
-      py={2}
-      bg={useColorModeValue("warmgray.50", "primary.900")}
-    >
+    <HStack alignItems="center" w="full" px={4} py={2} bg={hStackColor}>
       <Box w={30} h={30} mr={2}>
         <Pressable onPress={onToggleCheckbox}>
           <AnimatedCheckbox
@@ -57,7 +55,14 @@ const TaskItem = (props: Props) => {
           />
         </Pressable>
       </Box>
-      <Text onPress={onToggleCheckbox}>Hello</Text>
+      <AnimatedTaskLabel
+        strikethrough={isDone}
+        textColor={activeTextColor}
+        inactiveTextColor={donetextColor}
+        onPress={onToggleCheckbox}
+      >
+        Task item
+      </AnimatedTaskLabel>
     </HStack>
   );
 };
