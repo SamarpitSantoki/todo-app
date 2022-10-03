@@ -61,6 +61,7 @@ const AnimatedCheckbox = (props: Props) => {
       viewBox={[-MARGIN, -MARGIN, vWidth + MARGIN, vHeight + MARGIN].join(" ")}
     >
       <Defs>
+        {/*  @ts-ignore */}
         <ClipPath id="clipPath">
           <Path
             fill="white"
@@ -87,6 +88,7 @@ const AnimatedCheckbox = (props: Props) => {
         strokeLinecap="round"
         animatedProps={animatedBoxProps}
       />
+      {/* @ts-ignore */}
       <G clipPath="url(#clipPath)">
         <AnimatedStroke
           progress={progress}
