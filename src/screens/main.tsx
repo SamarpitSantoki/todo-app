@@ -7,12 +7,18 @@ import {
   useColorModeValue,
   Fab,
   Icon,
+  View,
 } from "native-base";
 import { AntDesign } from "@expo/vector-icons";
 import ThemeToggle from "../components/theme-toggle";
 import TaskItem from "../components/task-item";
 import shortid from "shortid";
 import TaskList from "../components/task-list";
+import Voice, {
+  SpeechErrorEvent,
+  SpeechResultsEvent,
+} from "@react-native-voice/voice";
+import { Button } from "react-native";
 
 const initialData = [
   {
@@ -88,6 +94,36 @@ export default function MainScreen() {
     [setData]
   );
 
+  const [results, setResults] = useState<any>([]);
+  const [isListening, setIsListening] = useState(false);
+
+  useEffect(() => {
+    function onSpeechResults(e: SpeechResultsEvent) {
+      setResults(e.value ?? []);
+    }
+    function onSpeechError(e: SpeechErrorEvent) {
+      console.error(e);
+    }
+    Voice.onSpeechError = onSpeechError;
+    Voice.onSpeechResults = onSpeechResults;
+    return function cleanup() {
+      Voice.destroy().then(Voice.removeAllListeners);
+    };
+  }, []);
+  async function toggleListening() {
+    try {
+      if (isListening) {
+        if (await Voice.isRecognizing()) await Voice.stop();
+        setIsListening(false);
+      } else {
+        setResults([]);
+        await Voice.start("en-US");
+        setIsListening(true);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }
   return (
     <Center
       _dark={{ bg: "blueGray.900" }}
@@ -130,6 +166,17 @@ export default function MainScreen() {
           setEditingItemId(newId);
         }}
       />
+      <View>
+        <Text>Press the button and start speaking.</Text>
+        <Button
+          title={isListening ? "Stop Recognizing" : "Start Recognizing"}
+          onPress={toggleListening}
+        />
+        <Text>Results:</Text>
+        {results.map((result: any, index: any) => {
+          return <Text key={`result-${index}`}>{result}</Text>;
+        })}
+      </View>
     </Center>
   );
 }
