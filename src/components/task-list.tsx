@@ -62,7 +62,7 @@ export const AnimatedTaskItem = (props: TaskItemProps) => {
   }, [data, onFinishEditing]);
 
   const handlePressLabel = useCallback(() => {
-    data;
+    onPressLabel(data);
   }, [data, onPressLabel]);
 
   const handleRemove = useCallback(() => {

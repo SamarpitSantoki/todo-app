@@ -13,15 +13,20 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
-    "eject": "expo eject"
+    "eject": "expo eject",
+    "build-apk": "eas build --platform android",
+    "build-preview": "eas build --profile preview --platform android"
   },
   "dependencies": {
+    "@react-native-async-storage/async-storage": "~1.17.3",
     "@react-native-voice/voice": "^3.2.4",
     "@react-navigation/drawer": "^6.1.8",
     "@react-navigation/native": "^6.0.6",
+    "@reduxjs/toolkit": "^1.8.6",
     "@types/shortid": "^0.0.29",
     "expo": "~46.0.13",
     "expo-linking": "~3.2.2",
+    "expo-splash-screen": "~0.16.2",
     "expo-status-bar": "~1.4.0",
     "moti": "^0.16.1",
     "native-base": "^3.2.1",
@@ -34,10 +39,10 @@
     "react-native-screens": "~3.15.0",
     "react-native-svg": "12.3.0",
     "react-native-web": "~0.18.7",
+    "react-redux": "^8.0.4",
     "shortid": "^2.2.16",
     "styled-components": "^5.3.3",
-    "styled-system": "^5.1.5",
-    "expo-splash-screen": "~0.16.2"
+    "styled-system": "^5.1.5"
   },
   "devDependencies": {
     "@babel/core": "^7.12.9",

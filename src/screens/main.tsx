@@ -1,7 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import {
   Text,
-  Box,
   Center,
   VStack,
   useColorModeValue,
@@ -11,7 +10,6 @@ import {
 } from "native-base";
 import { AntDesign } from "@expo/vector-icons";
 import ThemeToggle from "../components/theme-toggle";
-import TaskItem from "../components/task-item";
 import shortid from "shortid";
 import TaskList from "../components/task-list";
 import Voice, {
@@ -19,6 +17,15 @@ import Voice, {
   SpeechResultsEvent,
 } from "@react-native-voice/voice";
 import { Button } from "react-native";
+import { useAppDispatch, useAppSelector } from "../hooks/storeHooks";
+import {
+  addTask,
+  selectTaskList,
+  syncWithLocalStorage,
+  toggleTaskState,
+  updateTask,
+} from "../redux/taskSlice";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const initialData = [
   {
@@ -34,41 +41,23 @@ const initialData = [
 ];
 
 export default function MainScreen() {
+  const taskList = useAppSelector(selectTaskList);
+  const dispatch = useAppDispatch();
   const [data, setData] = useState(initialData);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
 
   const handleToggleTaskItem = useCallback(
     (item: typeof initialData[0]) => {
-      setData((prevData) => {
-        return prevData.map((prevItem) => {
-          if (prevItem.id === item.id) {
-            return {
-              ...prevItem,
-              done: !prevItem.done,
-            };
-          }
-          return prevItem;
-        });
-      });
+      dispatch(toggleTaskState(item.id));
     },
-    [setData]
+    [toggleTaskState]
   );
 
   const handleChangeTaskItemSubject = useCallback(
-    (item: typeof initialData[0], newSubject: string) => {
-      setData((prevData) => {
-        return prevData.map((prevItem) => {
-          if (prevItem.id === item.id) {
-            return {
-              ...prevItem,
-              subject: newSubject,
-            };
-          }
-          return prevItem;
-        });
-      });
+    (item: typeof initialData[0], subject: string) => {
+      dispatch(updateTask({ id: item.id, subject, done: item.done }));
     },
-    [setData]
+    [updateTask]
   );
 
   const handleFinishEditingTaskItem = useCallback(
@@ -124,6 +113,25 @@ export default function MainScreen() {
       console.error(e);
     }
   }
+
+  // useEffect(() => {
+  //   if (results.length > 0) {
+  //     dispatch(addTask(results[0]));
+  //     toggleListening();
+  //   }
+  // }, [results]);
+
+  const saveToLocalStorage = useCallback(async () => {
+    await AsyncStorage.setItem("taskList", JSON.stringify(taskList));
+  }, []);
+
+  useEffect(() => {
+    saveToLocalStorage();
+  }, [taskList]);
+
+  useEffect(() => {
+    dispatch(syncWithLocalStorage());
+  }, []);
   return (
     <Center
       _dark={{ bg: "blueGray.900" }}
@@ -133,7 +141,7 @@ export default function MainScreen() {
     >
       <VStack space={5} alignItems="center" w="full">
         <TaskList
-          data={data}
+          data={taskList as any}
           onToggleItem={handleToggleTaskItem}
           onChangeSubject={handleChangeTaskItemSubject}
           onFinishEditing={handleFinishEditingTaskItem}
@@ -153,21 +161,18 @@ export default function MainScreen() {
         bg={useColorModeValue("blue.500", "blue.500")}
         onPress={() => {
           const newId = shortid.generate();
-          setData((prevData) => {
-            return [
-              {
-                id: newId,
-                subject: "",
-                done: false,
-              },
-              ...prevData,
-            ];
-          });
+          dispatch(
+            addTask({
+              id: newId,
+              subject: "",
+              done: false,
+            })
+          );
           setEditingItemId(newId);
         }}
       />
       <View>
-        <Text>Press the button and start speaking.</Text>
+        <Text>Press the button start speaking.</Text>
         <Button
           title={isListening ? "Stop Recognizing" : "Start Recognizing"}
           onPress={toggleListening}
