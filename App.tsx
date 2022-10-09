@@ -1,4 +1,3 @@
-import { StyleSheet } from "react-native";
 import AppContainer from "./src/components/app-container";
 import Navigator from "./src/";
 import { Provider } from "react-redux";

@@ -7,6 +7,7 @@ import {
   Fab,
   Icon,
   View,
+  Input,
 } from "native-base";
 import { AntDesign } from "@expo/vector-icons";
 import ThemeToggle from "../components/theme-toggle";
@@ -26,6 +27,8 @@ import {
   updateTask,
 } from "../redux/taskSlice";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import axios from "axios";
+import * as Speech from "expo-speech";
 
 const initialData = [
   {
@@ -41,11 +44,14 @@ const initialData = [
 ];
 
 export default function MainScreen() {
+  const [urlAI, setUrlAI] = useState("https://89a7-117-200-53-212.in.ngrok.io");
   const taskList = useAppSelector(selectTaskList);
   const dispatch = useAppDispatch();
   const [data, setData] = useState(initialData);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
-
+  const [responseFromServer, setResponseFromServer] = useState<string | null>(
+    null
+  );
   const handleToggleTaskItem = useCallback(
     (item: typeof initialData[0]) => {
       dispatch(toggleTaskState(item.id));
@@ -114,13 +120,6 @@ export default function MainScreen() {
     }
   }
 
-  // useEffect(() => {
-  //   if (results.length > 0) {
-  //     dispatch(addTask(results[0]));
-  //     toggleListening();
-  //   }
-  // }, [results]);
-
   const saveToLocalStorage = useCallback(async () => {
     await AsyncStorage.setItem("taskList", JSON.stringify(taskList));
   }, []);
@@ -129,9 +128,75 @@ export default function MainScreen() {
     saveToLocalStorage();
   }, [taskList]);
 
+  const checkthis = async () => {
+    const data = await AsyncStorage.getItem("taskList");
+    if (data) {
+      console.log("data", data);
+    } else {
+      console.log("no data");
+    }
+  };
+
   useEffect(() => {
     dispatch(syncWithLocalStorage());
   }, []);
+
+  const talkToAi = () => {
+    if (results[0] === "add") {
+      const newId = shortid.generate();
+      dispatch(addTask({ id: newId, subject: results[1], done: false }));
+    }
+  };
+
+  useEffect(() => {
+    if (results.length > 0) fetchResponse();
+  }, [results]);
+  const fetchResponse = async () => {
+    console.log("making request");
+
+    const res = await axios.post(
+      urlAI + "/webhooks/rest/webhook/",
+      {
+        recipint_id: "hit112",
+        message: results[0],
+      },
+      {
+        headers: {
+          "ngrok-skip-browser-warning": "69420",
+        },
+      }
+    );
+    // get request
+    // const res = await axios.get("https://e7b9-117-200-53-212.in.ngrok.io/");
+
+    console.log(res.data, "shi");
+    setResponseFromServer(JSON.stringify(res.data));
+    if (res.status === 200) {
+      console.log(typeof res.data[0]);
+      if (res.data[0]?.custom?.response_type === "add_task") {
+        const newId = shortid.generate();
+        dispatch(
+          addTask({ id: newId, subject: "new Task - " + newId, done: false })
+        );
+      }
+
+      if (res.data[0]?.custom?.response_type === "update_task") {
+      }
+
+      if (res.data[0]?.text) {
+        Speech.speak(res.data[0].text);
+      } else {
+        Speech.speak(res.data[0].custom.voiceovertext);
+      }
+      setIsListening(false);
+    } else {
+      Speech.speak("Bro, Request failed");
+      setIsListening(false);
+      console.log("error", res.data);
+    }
+    // using fetch
+  };
+
   return (
     <Center
       _dark={{ bg: "blueGray.900" }}
@@ -152,6 +217,27 @@ export default function MainScreen() {
 
         <ThemeToggle />
       </VStack>
+      <View>
+        <Text>Add Backend URL here</Text>
+        <Input value={urlAI} onChangeText={(e) => setUrlAI(e)} />
+        <Text bold underline fontSize={20}>
+          Response from server
+        </Text>
+        <Text>
+          {responseFromServer ? responseFromServer : "No response yet"}
+        </Text>
+      </View>
+      <Fab
+        disabled={isListening}
+        position="absolute"
+        placement="bottom-left"
+        renderInPortal={false}
+        size="sm"
+        icon={<Icon color="white" as={<AntDesign name="user" />} />}
+        colorScheme={useColorModeValue("blue", "darkBlue")}
+        bg={useColorModeValue("blue.500", "blue.500")}
+        onPress={toggleListening}
+      />
       <Fab
         position="absolute"
         renderInPortal={false}
@@ -177,7 +263,7 @@ export default function MainScreen() {
           title={isListening ? "Stop Recognizing" : "Start Recognizing"}
           onPress={toggleListening}
         />
-        <Text>Results:</Text>
+        <Text>Voice Collected:</Text>
         {results.map((result: any, index: any) => {
           return <Text key={`result-${index}`}>{result}</Text>;
         })}
