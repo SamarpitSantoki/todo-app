@@ -115,7 +115,7 @@ export default function TaskList(props: TaskListProps) {
               key={item.id}
               data={item}
               simultaneousHandlers={refScrollView}
-              isEditing={item.id === editingItemId}
+              isEditing={isEditing}
               onChangeSubject={onChangeSubject}
               onFinishEditing={onFinishEditing}
               onPressLabel={onPressLabel}

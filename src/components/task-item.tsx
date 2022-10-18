@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { Input, Pressable } from "native-base";
 import {
   Box,
@@ -73,16 +73,18 @@ const TaskItem = (props: Props) => {
     },
     [onChangeSubject]
   );
-
+  const [isSwiping, setIsSwiping] = useState(false);
   return (
     <SwipableView
       simultaneousHandlers={simultaneousHandlers}
       onSwipeLeft={onRemove}
+      onSwipeStart={() => setIsSwiping(true)}
+      onSwipeEnd={() => setIsSwiping(false)}
       backView={
         <Box
           w="full"
           h="full"
-          bg="red.500"
+          bg={isSwiping ? "red.500" : "transparent"}
           alignItems="flex-end"
           justifyContent="center"
           pr={4}
