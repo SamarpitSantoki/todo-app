@@ -36,6 +36,7 @@ import { ActivityIndicator } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { addMessage, resetStory } from "../redux/storySlice";
 import e from "cors";
+import GreetingTab from "../components/greeting-tab";
 
 export default function MainScreen() {
   const urlAI = useAppSelector((state) => state.backend.url);
@@ -240,6 +241,7 @@ export default function MainScreen() {
       px={5}
       flex={1}
     >
+      <GreetingTab />
       <HStack
         space="1"
         alignItems="center"
@@ -326,6 +328,7 @@ export default function MainScreen() {
         alignItems="center"
         w="full"
         flexGrow={1}
+        marginY={3}
       >
         <TaskList
           data={taskList as any}
