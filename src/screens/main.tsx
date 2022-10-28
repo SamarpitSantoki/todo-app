@@ -1,22 +1,19 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import {
   Text,
   Center,
   VStack,
   useColorModeValue,
   Fab,
-  Button,
-  Icon,
   View,
-  Input,
+  Icon,
   Pressable,
   HStack,
 } from "native-base";
 import { AntDesign } from "@expo/vector-icons";
-
-import ThemeToggle from "../components/theme-toggle";
+import BottomSheet, { useBottomSheet } from "@gorhom/bottom-sheet";
 import shortid from "shortid";
-import TaskList from "../components/task-list";
+import TaskList from "../components/taskList/task-list";
 import Voice, {
   SpeechErrorEvent,
   SpeechResultsEvent,
@@ -30,28 +27,24 @@ import {
   syncWithLocalStorage,
   toggleTaskState,
   updateTask,
+  updateTaskList,
 } from "../redux/taskSlice";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import * as Speech from "expo-speech";
-import { addEventListener } from "expo-linking";
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
-} from "react-native-reanimated";
+import ChatScreen from "../components/chat";
 import { ActivityIndicator } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { addMessage, resetStory } from "../redux/storySlice";
+import e from "cors";
 
 export default function MainScreen() {
   const urlAI = useAppSelector((state) => state.backend.url);
   const taskList = useAppSelector(selectTaskList);
+  const storyId = useAppSelector((state) => state.story.storyId);
   const [filter, setFilter] = useState("all");
   const dispatch = useAppDispatch();
   const [data, setData] = useState(taskList);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
-  const [responseFromServer, setResponseFromServer] = useState<string | null>(
-    null
-  );
   const handleToggleTaskItem = useCallback(
     (item: typeof taskList[0]) => {
       dispatch(toggleTaskState(item.id));
@@ -87,20 +80,15 @@ export default function MainScreen() {
     [setData]
   );
 
-  const handleFilterTask = useCallback(
-    (filter: string) => {
-      setFilter(filter);
-    },
-    [setFilter]
-  );
-
   const [results, setResults] = useState<any>([]);
   const [isListening, setIsListening] = useState(false);
 
+  // check if keyboard open
+  const [keyboardOpen, setKeyboardOpen] = useState(false);
+
+  // setting up voice recognisation
   useEffect(() => {
     function onSpeechResults(e: SpeechResultsEvent) {
-      console.log("onSpeechResults: ", e.value);
-
       setResults(e.value ?? []);
     }
     function onSpeechError(e: SpeechErrorEvent) {
@@ -114,12 +102,16 @@ export default function MainScreen() {
       Voice.destroy().then(Voice.removeAllListeners);
     };
   }, []);
+
   async function toggleListening() {
     try {
       if (isListening) {
-        if (await Voice.isRecognizing()) await Voice.stop();
+        try {
+          if (await Voice.isRecognizing()) await Voice.stop();
+        } catch (e) {}
         setIsListening(false);
       } else {
+        setViewSheet(true);
         setResults([]);
         await Voice.start("en-IN");
         setIsListening(true);
@@ -129,31 +121,23 @@ export default function MainScreen() {
     }
   }
 
-  useEffect(() => {
-    dispatch(syncWithLocalStorage());
-  }, []);
-
-  const talkToAi = () => {
-    if (results[0] === "add") {
-      const newId = shortid.generate();
-      dispatch(addTask({ id: newId, subject: results[1], done: false }));
-    }
-  };
-
-  useEffect(() => {
-    if (results.length > 0) fetchResponse();
-  }, [results]);
-
-  useEffect(() => {
-    dispatch(filterTaskByStatus(filter));
-  }, [filter]);
-  const fetchResponse = async () => {
+  const fetchResponse = useCallback(async () => {
     console.log("making request");
     try {
+      const newId = shortid.generate();
+      console.log(storyId);
+
+      dispatch(
+        addMessage({
+          id: newId,
+          message: results[0],
+          sender: "us",
+        })
+      );
       const res = await axios.post(
         urlAI + "/webhooks/rest/webhook/",
         {
-          recipint_id: "hit101",
+          sender: "sam" + storyId,
           message: results[0],
         },
         {
@@ -163,17 +147,26 @@ export default function MainScreen() {
         }
       );
 
-      console.log(res.data, "shi");
-      setResponseFromServer(JSON.stringify(res.data));
       if (res.status === 200) {
-        console.log(res.data);
-
-        console.log(typeof res.data[0]);
         if (res.data[0]?.custom?.response_type === "add_task") {
           const newId = shortid.generate();
           dispatch(
-            addTask({ id: newId, subject: "new Task - " + newId, done: false })
+            addTask({
+              id: newId,
+              subject: "new Task - " + newId,
+              done: false,
+            })
           );
+        }
+        if (res.data[0]?.custom?.response_type === "list_tasks") {
+          const Payload = res.data[0].custom.payload;
+          const newTaskList = Payload.map((task: any) => ({
+            id: task.id,
+            subject: task.heading,
+            done: task.status === "Unfinished" ? false : true,
+          }));
+
+          dispatch(updateTaskList(newTaskList));
         }
 
         if (res.data[0]?.custom?.response_type === "update_task") {
@@ -181,22 +174,64 @@ export default function MainScreen() {
 
         if (res.data[0]?.text) {
           Speech.speak(res.data[0].text);
+          dispatch(
+            addMessage({
+              id: newId,
+              message: res.data[0].text,
+              sender: "ai",
+            })
+          );
         } else {
           Speech.speak(res.data[0]?.custom?.voiceovertext || "sorry");
+          dispatch(
+            addMessage({
+              id: newId,
+              message: res.data[0]?.custom?.voiceovertext || "sorry",
+              sender: "ai",
+            })
+          );
         }
         setIsListening(false);
       } else {
         Speech.speak("Sorry, Could not understand");
+        dispatch(
+          addMessage({
+            id: newId,
+            message: "Sorry, Could not understand",
+            sender: "ai",
+          })
+        );
         setIsListening(false);
-        console.log("error", res.data);
       }
     } catch (e) {
-      console.log(e);
       Speech.speak("Sorry, try again");
-    }
-  };
+      bottomSheetRef.current?.snapToPosition("40%");
 
-  // make a animated button with react reanimated
+      setIsListening(false);
+      dispatch(
+        addMessage({
+          id: "error" + shortid.generate(),
+          message: "Sorry, try again",
+          sender: "ai",
+        })
+      );
+      setResults([]);
+    }
+  }, [results]);
+
+  useEffect(() => {
+    if (results.length > 1) fetchResponse();
+  }, [results]);
+
+  useEffect(() => {
+    dispatch(filterTaskByStatus(filter));
+  }, [filter]);
+
+  const bottomSheetRef = useRef<BottomSheet>(null);
+
+  const snapPoints = useMemo(() => ["40%"], []);
+
+  const [viewSheet, setViewSheet] = useState(false);
 
   return (
     <Center
@@ -302,11 +337,11 @@ export default function MainScreen() {
           editingItemId={editingItemId}
         />
       </VStack>
-
       <Fab
         position="absolute"
         placement="bottom-left"
-        renderInPortal={false}
+        bottom={1}
+        renderInPortal={true}
         size="sm"
         icon={
           isListening ? (
@@ -318,29 +353,67 @@ export default function MainScreen() {
             <Icon color="white" as={<AntDesign name="user" />} />
           )
         }
+        zIndex={50}
         colorScheme={useColorModeValue("blue", "darkBlue")}
         bg={useColorModeValue("blue.500", "blue.500")}
         onPress={toggleListening}
       />
-      <Fab
-        position="absolute"
-        renderInPortal={false}
-        size="sm"
-        icon={<Icon color="white" as={<AntDesign name="plus" />} />}
-        colorScheme={useColorModeValue("blue", "darkBlue")}
-        bg={useColorModeValue("blue.500", "blue.500")}
-        onPress={() => {
-          const newId = shortid.generate();
-          dispatch(
-            addTask({
-              id: newId,
-              subject: "",
-              done: false,
-            })
-          );
-          setEditingItemId(newId);
+      {!viewSheet && (
+        <>
+          <Fab
+            position="absolute"
+            placement="bottom-right"
+            bottom={1}
+            zIndex={50}
+            renderInPortal={false}
+            size="sm"
+            icon={<Icon color="white" as={<AntDesign name="plus" />} />}
+            colorScheme={useColorModeValue("blue", "darkBlue")}
+            bg={useColorModeValue("blue.500", "blue.500")}
+            onPress={() => {
+              const newId = shortid.generate();
+              dispatch(
+                addTask({
+                  id: newId,
+                  subject: "",
+                  done: false,
+                })
+              );
+              setEditingItemId(newId);
+            }}
+          />
+        </>
+      )}
+      <BottomSheet
+        ref={bottomSheetRef}
+        index={viewSheet ? 0 : -1}
+        snapPoints={snapPoints}
+        keyboardBehavior="interactive"
+        enablePanDownToClose
+        handleIndicatorStyle={{
+          backgroundColor: "white",
         }}
-      />
+        backgroundComponent={(props) => (
+          <LinearGradient
+            colors={["#0c8ce9", "#fff", "#fff"]}
+            style={{
+              position: "absolute",
+              left: 0,
+              right: 0,
+              top: 0,
+              height: "100%",
+              borderTopRightRadius: 35,
+              borderTopLeftRadius: 35,
+              // zIndex: 100,
+            }}
+          ></LinearGradient>
+        )}
+        onClose={() => {
+          setViewSheet(false), dispatch(resetStory());
+        }}
+      >
+        <ChatScreen />
+      </BottomSheet>
     </Center>
   );
 }

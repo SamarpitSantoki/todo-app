@@ -1,6 +1,6 @@
 import { createSlice } from "@reduxjs/toolkit";
 import type { PayloadAction } from "@reduxjs/toolkit";
-import type { RootState } from "../store/store";
+import type { RootState } from "./store";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // implement localStorage for tasks
@@ -84,7 +84,10 @@ export const taskSlice = createSlice({
         }
       });
     },
-
+    updateTaskList: (state, action: any) => {
+      state.taskList = action.paylaod;
+      state.filterdTaskList = action.payload;
+    },
     addTask: (state, action: PayloadAction<Task>) => {
       state.taskList.push(action.payload);
       state.filterdTaskList = state.taskList;
@@ -128,6 +131,7 @@ export const taskSlice = createSlice({
 });
 
 export const {
+  updateTaskList,
   addTask,
   toggleTaskState,
   updateTask,

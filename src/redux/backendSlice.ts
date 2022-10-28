@@ -5,7 +5,7 @@ interface BackendStaff {
 }
 
 const initialState: BackendStaff = {
-  url: "https://e6bd-117-200-53-212.in.ngrok.io",
+  url: "https://cd7b-117-200-53-212.in.ngrok.io",
 };
 
 export const backendSlice = createSlice({

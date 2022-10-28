@@ -1,11 +1,13 @@
 import { configureStore } from "@reduxjs/toolkit";
-import taskReducer from "../redux/taskSlice";
-import backendReducer from "../redux/backendSlice";
+import taskReducer from "./taskSlice";
+import backendReducer from "./backendSlice";
+import storyReducer from "./storySlice";
 
 export const store = configureStore({
   reducer: {
     task: taskReducer,
     backend: backendReducer,
+    story: storyReducer,
   },
 });
 
