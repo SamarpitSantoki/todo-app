@@ -28,7 +28,7 @@ const Discussion = ({ navigation }: any) => {
 
   // lets make a function to render the messages
   const renderMessages = () => {
-    return Data.map((message: any, index: number) => {
+    return Data?.map((message: any, index: number) => {
       if (message.sender === "ai") {
         return <Received key={index} message={message.message} />;
       } else {

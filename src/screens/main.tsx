@@ -23,6 +23,7 @@ import {
   addTask,
   deleteTask,
   filterTaskByStatus,
+  saveToLocalStorage,
   selectTaskList,
   syncWithLocalStorage,
   toggleTaskState,
@@ -36,7 +37,7 @@ import { ActivityIndicator } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { addMessage, resetStory } from "../redux/storySlice";
 import e from "cors";
-import GreetingTab from "../components/greeting-tab";
+import GreetingTab from "../components/mainScreen/GreetingTab";
 
 export default function MainScreen() {
   const urlAI = useAppSelector((state) => state.backend.url);
@@ -99,8 +100,12 @@ export default function MainScreen() {
     Voice.onSpeechError = onSpeechError;
     Voice.onSpeechResults = onSpeechResults;
     Voice.onSpeechError = onSpeechError;
+
+    dispatch(syncWithLocalStorage());
+
     return function cleanup() {
       Voice.destroy().then(Voice.removeAllListeners);
+      console.log("cleanup");
     };
   }, []);
 

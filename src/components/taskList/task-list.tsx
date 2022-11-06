@@ -108,7 +108,7 @@ export default function TaskList(props: TaskListProps) {
     <StyledScrollView ref={refScrollView} w="full">
       {/* @ts-ignore */}
       <AnimatePresence>
-        {data.map((item) => {
+        {data?.map((item) => {
           const isEditing = item.id === editingItemId;
           return (
             <AnimatedTaskItem

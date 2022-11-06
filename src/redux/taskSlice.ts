@@ -1,4 +1,4 @@
-import { createSlice } from "@reduxjs/toolkit";
+import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import type { PayloadAction } from "@reduxjs/toolkit";
 import type { RootState } from "./store";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -14,76 +14,43 @@ interface Task {
 interface TaskState {
   taskList: Array<Task>;
   filterdTaskList: Array<Task>;
+  loading: boolean;
 }
 
 const initialState: TaskState = {
-  taskList: [
-    {
-      id: "1",
-      subject: "Task 1",
-      done: false,
-    },
-    {
-      id: "2",
-      subject: "Task 2",
-      done: true,
-    },
-    {
-      id: "3",
-      subject: "Task 3",
-      done: false,
-    },
-    {
-      id: "4",
-      subject: "Task 4",
-      done: false,
-    },
-    {
-      id: "5",
-      subject: "Task 5",
-      done: true,
-    },
-  ],
-  filterdTaskList: [
-    {
-      id: "1",
-      subject: "Task 1",
-      done: false,
-    },
-    {
-      id: "2",
-      subject: "Task 2",
-      done: true,
-    },
-    {
-      id: "3",
-      subject: "Task 3",
-      done: false,
-    },
-    {
-      id: "4",
-      subject: "Task 4",
-      done: false,
-    },
-    {
-      id: "5",
-      subject: "Task 5",
-      done: true,
-    },
-  ],
+  taskList: [],
+  filterdTaskList: [],
+  loading: false,
 };
+
+// Make a async function to get data from localStorage
+export const syncWithLocalStorage = createAsyncThunk(
+  "task/syncWithLocalStorage",
+  async () => {
+    const data = await AsyncStorage.getItem("taskList");
+    if (data) {
+      console.log("data", data);
+
+      return JSON.parse(data);
+    } else {
+      return [];
+    }
+  }
+);
+
+export const saveToLocalStorage = createAsyncThunk(
+  "task/saveToLocalStorage",
+  async (taskList: Array<Task>) => {
+    console.log("taskList", taskList);
+
+    await AsyncStorage.setItem("taskList", JSON.stringify(taskList));
+  }
+);
 
 export const taskSlice = createSlice({
   name: "task",
   initialState,
   reducers: {
-    syncWithLocalStorage: (state) => {
-      AsyncStorage.getItem("taskList").then((value) => {
-        if (value !== null) {
-          state.taskList = JSON.parse(value);
-        }
-      });
-    },
     updateTaskList: (state, action: any) => {
       state.taskList = action.paylaod;
       state.filterdTaskList = action.payload;
@@ -101,6 +68,7 @@ export const taskSlice = createSlice({
         (task) => task.id === action.payload.id
       );
       state.filterdTaskList[filterdIndex] = action.payload;
+      saveToLocalStorage(state.taskList);
     },
     toggleTaskState: (state, action: PayloadAction<string>) => {
       const index = state.taskList.findIndex(
@@ -128,6 +96,21 @@ export const taskSlice = createSlice({
       });
     },
   },
+  extraReducers(builder) {
+    builder.addCase(syncWithLocalStorage.pending, (state) => {
+      state.loading = true;
+    });
+
+    builder.addCase(syncWithLocalStorage.fulfilled, (state, action) => {
+      state.taskList = action.payload;
+      state.filterdTaskList = action.payload;
+      state.loading = false;
+    });
+
+    builder.addCase(syncWithLocalStorage.rejected, (state) => {
+      state.loading = false;
+    });
+  },
 });
 
 export const {
@@ -136,10 +119,9 @@ export const {
   toggleTaskState,
   updateTask,
   filterTaskByStatus,
-  syncWithLocalStorage,
   deleteTask,
 } = taskSlice.actions;
 
 export const selectTaskList = (state: RootState) => state.task.filterdTaskList;
-
+export const GET_TASK_LIST = (state: RootState) => state.task.taskList;
 export default taskSlice.reducer;
